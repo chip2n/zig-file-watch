@@ -1,0 +1,22 @@
+* zig-file-watch
+
+A simple file watcher for Zig projects (only works on Linux via inotify for now)
+
+#+begin_src zig
+const std = @import("std");
+const fwatch = @import("file_watch.zig");
+
+pub fn main() !void {
+    var watcher = try fwatch.FileWatcher(u8).init(std.heap.c_allocator, onFileEvent);
+    defer watcher.deinit();
+
+    try watcher.start();
+    try watcher.add("/tmp/test", 123);
+
+    ...
+}
+
+fn onFileEvent(event_type: fwatch.FileEventType, ctx: u8) !void {
+    std.log.info("File changed: {} - {}", .{event_type, ctx});
+}
+#+end_src
