@@ -10,7 +10,7 @@ const fd_t = std.os.linux.fd_t;
 
 const log = std.log.scoped(.filewatch);
 
-const fifo_path = "/tmp/hotreload-fifo";
+const fifo_path = "/tmp/fwatch-fifo";
 
 pub fn FileEvent(comptime T: type) type {
     return struct {
@@ -28,7 +28,7 @@ pub fn FileWatcher(comptime T: type) type {
         watched_files: FileTable,
     };
     const DirTable = std.StringHashMapUnmanaged(DirData);
-    const Callback = *const fn (FileEventType, T) anyerror!void;
+    const Callback = *const fn (event_type: FileEventType, path: []const u8, context: T) anyerror!void;
 
     return struct {
         const Self = @This();
@@ -234,7 +234,7 @@ pub fn FileWatcher(comptime T: type) type {
                                 // File was modified
                                 if (file) |f| {
                                     log.info("Modified {s}", .{full_path});
-                                    watcher.callback(.modified, f) catch |err| {
+                                    watcher.callback(.modified, full_path, f) catch |err| {
                                         log.err("Callback failed for {s} - {}", .{ full_path, err });
                                     };
                                 }
@@ -242,7 +242,7 @@ pub fn FileWatcher(comptime T: type) type {
                                 if (file) |f| {
                                     // We count this as a modification of the file
                                     log.info("Moved {s}", .{full_path});
-                                    watcher.callback(.modified, f) catch |err| {
+                                    watcher.callback(.modified, full_path, f) catch |err| {
                                         log.err("Callback failed for {s} - {}", .{ full_path, err });
                                     };
                                 }
@@ -251,7 +251,7 @@ pub fn FileWatcher(comptime T: type) type {
 
                                 if (file) |f| {
                                     log.info("Deleted {s}", .{full_path});
-                                    watcher.callback(.deleted, f) catch |err| {
+                                    watcher.callback(.deleted, full_path, f) catch |err| {
                                         log.err("Callback failed for {s} - {}", .{ full_path, err });
                                     };
                                 }
@@ -292,8 +292,9 @@ const TestFile = struct {
     }
 };
 
-fn onFileChanged(event_type: FileEventType, file: *TestFile) !void {
-    try file.events.append(event_type);
+fn onFileChanged(event_type: FileEventType, path: []const u8, context: *TestFile) !void {
+    _ = path;
+    try context.events.append(event_type);
 }
 
 test "init and deinit" {
