@@ -238,6 +238,14 @@ pub fn FileWatcher(comptime T: type) type {
                                         log.err("Callback failed for {s} - {}", .{ full_path, err });
                                     };
                                 }
+                            } else if (event.mask & os.linux.IN.MOVED_TO == os.linux.IN.MOVED_TO) {
+                                if (file) |f| {
+                                    // We count this as a modification of the file
+                                    log.info("Moved {s}", .{full_path});
+                                    watcher.callback(.modified, f) catch |err| {
+                                        log.err("Callback failed for {s} - {}", .{ full_path, err });
+                                    };
+                                }
                             } else if (event.mask & os.linux.IN.DELETE == os.linux.IN.DELETE) {
                                 // File or directory was deleted
 
