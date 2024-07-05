@@ -1,4 +1,5 @@
 * zig-file-watch
+[[https://github.com/chip2n/zig-file-watch/workflows/CI/badge.svg]]
 
 A simple file watcher for Zig projects (only works on Linux via inotify for now)
 
