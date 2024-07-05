@@ -6,11 +6,11 @@ pub fn build(b: *std.Build) void {
 
     _ = b.addModule(
         "fwatch",
-        .{ .root_source_file = .{ .path = "src/main.zig" } },
+        .{ .root_source_file = b.path("src/main.zig") },
     );
 
     const main_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });

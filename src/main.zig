@@ -1,6 +1,7 @@
 const std = @import("std");
 
 const os = std.os;
+const posix = std.posix;
 const Thread = std.Thread;
 const Mutex = std.Thread.Mutex;
 const Condition = std.Thread.Condition;
@@ -48,8 +49,8 @@ pub fn FileWatcher(comptime T: type) type {
         pub fn init(allocator: Allocator, callback: Callback) !*Self {
             var arena = std.heap.ArenaAllocator.init(allocator);
 
-            const fd = try os.inotify_init1(0);
-            errdefer os.close(fd);
+            const fd = try posix.inotify_init1(0);
+            errdefer posix.close(fd);
 
             const ptr = try arena.allocator().create(Self);
             ptr.* = Self{
@@ -65,8 +66,7 @@ pub fn FileWatcher(comptime T: type) type {
         pub fn deinit(self: *Self) void {
             var iterator = self.directory_table.valueIterator();
             while (iterator.next()) |dir_data| {
-                const result = os.linux.inotify_rm_watch(self.inotify_fd, dir_data.inotify_wd);
-                std.debug.assert(result == 0);
+                posix.inotify_rm_watch(self.inotify_fd, dir_data.inotify_wd);
             }
 
             // send termination signal over fifo
@@ -127,7 +127,7 @@ pub fn FileWatcher(comptime T: type) type {
                 break :blk cwd;
             };
             const mask = os.linux.IN.CLOSE_WRITE | os.linux.IN.ONLYDIR | os.linux.IN.DELETE | os.linux.IN.EXCL_UNLINK | os.linux.IN.MOVED_TO;
-            const wd = try os.inotify_add_watch(self.inotify_fd, dir_path, mask);
+            const wd = try posix.inotify_add_watch(self.inotify_fd, dir_path, mask);
 
             const result = try self.directory_table.getOrPut(allocator, dir_path);
             if (!result.found_existing) {
@@ -156,7 +156,7 @@ pub fn FileWatcher(comptime T: type) type {
             const wd = dir_data.inotify_wd;
             _ = dir_data.watched_files.remove(basename);
             if (dir_data.watched_files.size == 0) {
-                os.inotify_rm_watch(self.inotify_fd, wd);
+                posix.inotify_rm_watch(self.inotify_fd, wd);
                 _ = self.directory_table.remove(dir_path);
                 log.info("Watch removed {s}", .{path});
             }
@@ -168,26 +168,26 @@ pub fn FileWatcher(comptime T: type) type {
 
             const allocator = watcher.arena.allocator();
             const fd = watcher.inotify_fd;
-            const termination_fd = try os.open(fifo_path, .{ .ACCMODE = .RDONLY }, 0); // TODO use std.fs
+            const termination_fd = try posix.open(fifo_path, .{ .ACCMODE = .RDONLY }, 0); // TODO use std.fs
 
             var buf: [4096]u8 align(@alignOf(os.linux.inotify_event)) = undefined;
 
-            var fds = [_]std.os.pollfd{
-                os.pollfd{ .fd = fd, .events = os.linux.POLL.IN, .revents = 0 },
-                os.pollfd{ .fd = termination_fd, .events = os.linux.POLL.IN, .revents = 0 },
+            var fds = [_]std.posix.pollfd{
+                posix.pollfd{ .fd = fd, .events = os.linux.POLL.IN, .revents = 0 },
+                posix.pollfd{ .fd = termination_fd, .events = os.linux.POLL.IN, .revents = 0 },
             };
             const inotify_pollfd = &fds[0];
             const termination_pollfd = &fds[1];
 
             loop: while (true) {
-                _ = try os.poll(fds[0..], -1);
+                _ = try posix.poll(fds[0..], -1);
 
                 if (termination_pollfd.revents != 0) {
                     break;
                 }
 
                 if (inotify_pollfd.revents != 0) {
-                    const num_read = os.read(fd, &buf) catch |err| {
+                    const num_read = posix.read(fd, &buf) catch |err| {
                         switch (err) {
                             error.NotOpenForReading => break, // file descriptor was closed - terminate thread
                             else => return err,
