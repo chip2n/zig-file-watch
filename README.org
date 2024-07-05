@@ -17,7 +17,7 @@ pub fn main() !void {
     ...
 }
 
-fn onFileEvent(event_type: fwatch.FileEventType, ctx: u8) !void {
-    std.log.info("File changed: {} - {}", .{event_type, ctx});
+fn onFileEvent(event_type: fwatch.FileEventType, path: []const u8, ctx: u8) !void {
+    std.log.info("File event ({}): {s} (context: {})", .{event_type, path, ctx});
 }
 #+end_src
