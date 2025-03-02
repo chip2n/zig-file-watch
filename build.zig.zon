@@ -1,6 +1,7 @@
 .{
-    .name = "zig-file-watch",
+    .name = .file_watch,
     .version = "0.1.2",
+    .fingerprint = 0xfa88fa11e1efefdf, // Changing this has security and trust implications.
     .dependencies = .{},
     .paths = .{
         "src",
